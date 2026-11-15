@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow user-configured IPTV HTTP streams when providers serve HLS/TS over HTTP,
+         while backend device activation & pairing requests strictly enforce HTTPS in code. -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

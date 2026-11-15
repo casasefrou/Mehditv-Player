@@ -1,0 +1,6 @@
+{
+  "name": "MehdiTv Player",
+  "description": "Professional Android & Android TV IPTV media player supporting M3U/M3U8, Xtream Codes API, XMLTV EPG, Media3 ExoPlayer, QR device pairing, and Arabic RTL / English LTR layouts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

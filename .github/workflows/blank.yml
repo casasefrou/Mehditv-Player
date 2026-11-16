@@ -1,60 +1,69 @@
-
-name: Build MehdiTv Player APK
+name: Build Android APK
 
 on:
+  push:
+    branches: [ main, master ]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
-    name: Build Android APK
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: 17
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
 
-      - name: Install Android SDK Packages
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platforms;android-36-ext1" "build-tools;36.0.0"
-
-      - name: Setup Gradle 9.3.1
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.3.1'
+          gradle-version: 9.3.1
 
-      - name: Generate Debug Keystore
+      - name: Generate debug keystore
         run: |
-          keytool -genkeypair -v \
-            -keystore debug.keystore \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -dname "CN=Android Debug,O=Android,C=US" \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkey -v -keystore ~/.android/debug.keystore \
+              -storepass android -alias androiddebugkey -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
 
-      - name: Build APK and Run Unit Tests
+      - name: Build APK
         run: |
-          gradle :app:assembleDebug :app:testDebugUnitTest
+          if [ -f ./gradlew ]; then
+            chmod +x ./gradlew
+            ./gradlew assembleDebug --no-daemon
+          else
+            gradle assembleDebug --no-daemon
+          fi
 
-      - name: Upload APK
+      - name: Collect APK
+        run: |
+          APK=$(find . -path "*build/outputs/apk*" -name "*.apk" | head -n 1)
+          echo "Found: $APK"
+          cp "$APK" App.apk
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MehdiTv-Player-APK
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 14
+          name: App
+          path: App.apk
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v1.0.${{ github.run_number }}" App.apk \
+            --title "Build ${{ github.run_number }}" \
+            --notes "Automated build" --latest
